@@ -1,17 +1,22 @@
 [project]
-name = "mcp-obsidian"
-version = "0.2.1"
-description = "MCP server to work with Obsidian via the remote REST plugin"
+name = "mcp-obsidian-remote"
+version = "0.1.0"
+description = "MCP server to work with Obsidian remotely via REST plugin"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
- "mcp>=1.1.0",
- "python-dotenv>=1.0.1",
- "requests>=2.32.3",
+	"mcp>=1.1.0",
+	"python-dotenv>=1.0.1",
+	"requests>=2.32.3",
 ]
+
 [[project.authors]]
 name = "Markus Pfundstein"
 email = "markus@life-electronic.nl"
+
+[[project.authors]]
+name = "Alexei Smirnov"
+email = "alexei@virtuman.com"
 
 [build-system]
 requires = [ "hatchling",]
@@ -19,8 +24,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "pyright>=1.1.389",
+	"pyright>=1.1.389",
 ]
 
 [project.scripts]
-mcp-obsidian = "mcp_obsidian:main"
+mcp-obsidian-remote = "mcp_obsidian_remote.server:main"
