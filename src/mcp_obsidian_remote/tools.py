@@ -13,6 +13,18 @@ api_key = os.getenv("OBSIDIAN_API_KEY", "")
 if api_key == "":
     raise ValueError(f"OBSIDIAN_API_KEY environment variable required. Working directory: {os.getcwd()}")
 
+api_protocol = os.getenv('OBSIDIAN_PROTOCOL', 'https')
+api_host = os.getenv('OBSIDIAN_HOST', 'localhost')
+api_port = os.getenv('OBSIDIAN_PORT', 27123)
+api_verify_ssl = os.getenv('OBSIDIAN_VERIFY_SSL', False)
+
+api = obsidian.Obsidian(api_key=api_key,
+                        host=api_host,
+                        port=api_port,
+                        protocol=api_protocol,
+                        verify_ssl=api_verify_ssl)
+
+
 TOOL_LIST_FILES_IN_VAULT = "obsidian_list_files_in_vault"
 TOOL_LIST_FILES_IN_DIR = "obsidian_list_files_in_dir"
 
@@ -23,9 +35,9 @@ class ToolHandler():
     def get_tool_description(self) -> Tool:
         raise NotImplementedError()
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         raise NotImplementedError()
-    
+
 class ListFilesInVaultToolHandler(ToolHandler):
     def __init__(self):
         super().__init__(TOOL_LIST_FILES_IN_VAULT)
@@ -41,9 +53,7 @@ class ListFilesInVaultToolHandler(ToolHandler):
             },
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
-
-        api = obsidian.Obsidian(api_key=api_key)
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
 
         files = api.list_files_in_vault()
 
@@ -53,7 +63,7 @@ class ListFilesInVaultToolHandler(ToolHandler):
                 text=json.dumps(files, indent=2)
             )
         ]
-    
+
 class ListFilesInDirToolHandler(ToolHandler):
     def __init__(self):
         super().__init__(TOOL_LIST_FILES_IN_DIR)
@@ -74,12 +84,10 @@ class ListFilesInDirToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
 
         if "dirpath" not in args:
             raise RuntimeError("dirpath argument missing in arguments")
-
-        api = obsidian.Obsidian(api_key=api_key)
 
         files = api.list_files_in_dir(args["dirpath"])
 
@@ -89,7 +97,7 @@ class ListFilesInDirToolHandler(ToolHandler):
                 text=json.dumps(files, indent=2)
             )
         ]
-    
+
 class GetFileContentsToolHandler(ToolHandler):
     def __init__(self):
         super().__init__("obsidian_get_file_contents")
@@ -111,11 +119,9 @@ class GetFileContentsToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         if "filepath" not in args:
             raise RuntimeError("filepath argument missing in arguments")
-
-        api = obsidian.Obsidian(api_key=api_key)
 
         content = api.get_file_contents(args["filepath"])
 
@@ -125,7 +131,7 @@ class GetFileContentsToolHandler(ToolHandler):
                 text=json.dumps(content, indent=2)
             )
         ]
-    
+
 class SearchToolHandler(ToolHandler):
     def __init__(self):
         super().__init__("obsidian_simple_search")
@@ -133,7 +139,7 @@ class SearchToolHandler(ToolHandler):
     def get_tool_description(self):
         return Tool(
             name=self.name,
-            description="""Simple search for documents matching a specified text query across all files in the vault. 
+            description="""Simple search for documents matching a specified text query across all files in the vault.
             Use this tool when you want to do a simple text search""",
             inputSchema={
                 "type": "object",
@@ -152,15 +158,14 @@ class SearchToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         if "query" not in args:
             raise RuntimeError("query argument missing in arguments")
 
         context_length = args.get("context_length", 100)
-        
-        api = obsidian.Obsidian(api_key=api_key)
+
         results = api.search(args["query"], context_length)
-        
+
         formatted_results = []
         for result in results:
             formatted_matches = []
@@ -169,12 +174,12 @@ class SearchToolHandler(ToolHandler):
                 match_pos = match.get('match', {})
                 start = match_pos.get('start', 0)
                 end = match_pos.get('end', 0)
-                
+
                 formatted_matches.append({
                     'context': context,
                     'match_position': {'start': start, 'end': end}
                 })
-                
+
             formatted_results.append({
                 'filename': result.get('filename', ''),
                 'score': result.get('score', 0),
@@ -187,7 +192,7 @@ class SearchToolHandler(ToolHandler):
                 text=json.dumps(formatted_results, indent=2)
             )
         ]
-    
+
 class AppendContentToolHandler(ToolHandler):
    def __init__(self):
        super().__init__("obsidian_append_content")
@@ -213,11 +218,10 @@ class AppendContentToolHandler(ToolHandler):
            }
        )
 
-   def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+   async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
        if "filepath" not in args or "content" not in args:
            raise RuntimeError("filepath and content arguments required")
 
-       api = obsidian.Obsidian(api_key=api_key)
        api.append_content(args.get("filepath", ""), args["content"])
 
        return [
@@ -226,7 +230,7 @@ class AppendContentToolHandler(ToolHandler):
                text=f"Successfully appended content to {args['filepath']}"
            )
        ]
-   
+
 class PatchContentToolHandler(ToolHandler):
    def __init__(self):
        super().__init__("obsidian_patch_content")
@@ -254,7 +258,7 @@ class PatchContentToolHandler(ToolHandler):
                        "enum": ["heading", "block", "frontmatter"]
                    },
                    "target": {
-                       "type": "string", 
+                       "type": "string",
                        "description": "Target identifier (heading path, block reference, or frontmatter field)"
                    },
                    "content": {
@@ -266,12 +270,11 @@ class PatchContentToolHandler(ToolHandler):
            }
        )
 
-   def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+   async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
        required = ["filepath", "operation", "target_type", "target", "content"]
        if not all(key in args for key in required):
            raise RuntimeError(f"Missing required arguments: {', '.join(required)}")
 
-       api = obsidian.Obsidian(api_key=api_key)
        api.patch_content(
            args.get("filepath", ""),
            args.get("operation", ""),
@@ -313,14 +316,13 @@ class DeleteFileToolHandler(ToolHandler):
            }
        )
 
-   def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+   async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
        if "filepath" not in args:
            raise RuntimeError("filepath argument missing in arguments")
-       
+
        if not args.get("confirm", False):
            raise RuntimeError("confirm must be set to true to delete a file")
 
-       api = obsidian.Obsidian(api_key=api_key)
        api.delete_file(args["filepath"])
 
        return [
@@ -329,7 +331,7 @@ class DeleteFileToolHandler(ToolHandler):
                text=f"Successfully deleted {args['filepath']}"
            )
        ]
-   
+
 class ComplexSearchToolHandler(ToolHandler):
    def __init__(self):
        super().__init__("obsidian_complex_search")
@@ -337,7 +339,7 @@ class ComplexSearchToolHandler(ToolHandler):
    def get_tool_description(self):
        return Tool(
            name=self.name,
-           description="""Complex search for documents using a JsonLogic query. 
+           description="""Complex search for documents using a JsonLogic query.
            Supports standard JsonLogic operators plus 'glob' and 'regexp' for pattern matching. Results must be non-falsy.
 
            Use this tool when you want to do a complex search, e.g. for all documents with certain tags etc.
@@ -354,11 +356,10 @@ class ComplexSearchToolHandler(ToolHandler):
            }
        )
 
-   def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+   async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
        if "query" not in args:
            raise RuntimeError("query argument missing in arguments")
 
-       api = obsidian.Obsidian(api_key=api_key)
        results = api.search_json(args.get("query", ""))
 
        return [
@@ -393,11 +394,10 @@ class BatchGetFileContentsToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         if "filepaths" not in args:
             raise RuntimeError("filepaths argument missing in arguments")
 
-        api = obsidian.Obsidian(api_key=api_key)
         content = api.get_batch_file_contents(args["filepaths"])
 
         return [
@@ -428,7 +428,7 @@ class PeriodicNotesToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         if "period" not in args:
             raise RuntimeError("period argument missing in arguments")
 
@@ -437,7 +437,6 @@ class PeriodicNotesToolHandler(ToolHandler):
         if period not in valid_periods:
             raise RuntimeError(f"Invalid period: {period}. Must be one of: {', '.join(valid_periods)}")
 
-        api = obsidian.Obsidian(api_key=api_key)
         content = api.get_periodic_note(period)
 
         return [
@@ -446,7 +445,7 @@ class PeriodicNotesToolHandler(ToolHandler):
                 text=content
             )
         ]
-        
+
 class RecentPeriodicNotesToolHandler(ToolHandler):
     def __init__(self):
         super().__init__("obsidian_get_recent_periodic_notes")
@@ -480,7 +479,7 @@ class RecentPeriodicNotesToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         if "period" not in args:
             raise RuntimeError("period argument missing in arguments")
 
@@ -492,12 +491,11 @@ class RecentPeriodicNotesToolHandler(ToolHandler):
         limit = args.get("limit", 5)
         if not isinstance(limit, int) or limit < 1:
             raise RuntimeError(f"Invalid limit: {limit}. Must be a positive integer")
-            
+
         include_content = args.get("include_content", False)
         if not isinstance(include_content, bool):
             raise RuntimeError(f"Invalid include_content: {include_content}. Must be a boolean")
 
-        api = obsidian.Obsidian(api_key=api_key)
         results = api.get_recent_periodic_notes(period, limit, include_content)
 
         return [
@@ -506,7 +504,7 @@ class RecentPeriodicNotesToolHandler(ToolHandler):
                 text=json.dumps(results, indent=2)
             )
         ]
-        
+
 class RecentChangesToolHandler(ToolHandler):
     def __init__(self):
         super().__init__("obsidian_get_recent_changes")
@@ -535,16 +533,15 @@ class RecentChangesToolHandler(ToolHandler):
             }
         )
 
-    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+    async def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
         limit = args.get("limit", 10)
         if not isinstance(limit, int) or limit < 1:
             raise RuntimeError(f"Invalid limit: {limit}. Must be a positive integer")
-            
+
         days = args.get("days", 90)
         if not isinstance(days, int) or days < 1:
             raise RuntimeError(f"Invalid days: {days}. Must be a positive integer")
 
-        api = obsidian.Obsidian(api_key=api_key)
         results = api.get_recent_changes(limit, days)
 
         return [
