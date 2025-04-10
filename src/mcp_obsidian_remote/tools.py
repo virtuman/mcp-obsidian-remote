@@ -13,7 +13,7 @@ api_key = os.getenv("OBSIDIAN_API_KEY", "")
 if api_key == "":
     raise ValueError(f"OBSIDIAN_API_KEY environment variable required. Working directory: {os.getcwd()}")
 
-api_protocol = os.getenv('OBSIDIAN_PROTOCOL', 'https')
+api_protocol = os.getenv('OBSIDIAN_PROTOCOL', 'http')
 api_host = os.getenv('OBSIDIAN_HOST', 'localhost')
 api_port = os.getenv('OBSIDIAN_PORT', 27123)
 api_verify_ssl = os.getenv('OBSIDIAN_VERIFY_SSL', False)
