@@ -200,7 +200,7 @@ class AppendContentToolHandler(ToolHandler):
    def get_tool_description(self):
        return Tool(
            name=self.name,
-           description="Append content to a new or existing file in the vault.",
+           description="Create new note or Append content to a new or existing note file in the vault.",
            inputSchema={
                "type": "object",
                "properties": {
@@ -211,7 +211,7 @@ class AppendContentToolHandler(ToolHandler):
                    },
                    "content": {
                        "type": "string",
-                       "description": "Content to append to the file"
+                       "description": "Content to create or append to the note file"
                    }
                },
                "required": ["filepath", "content"]
